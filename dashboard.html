@@ -8,434 +8,39 @@
     <!-- Font Awesome para iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Firebase SDK con Realtime Database -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-        
-        // ✅ TU CONFIGURACIÓN DE FIREBASE
-        const firebaseConfig = {
-            apiKey: "AIzaSyAwQTSzKnxsqKHfTTfLYWzKnWdHxFo1YUU",
-            authDomain: "amani-160bf.firebaseapp.com",
-            databaseURL: "https://amani-160bf-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "amani-160bf",
-            storageBucket: "amani-160bf.firebasestorage.app",
-            messagingSenderId: "560473593904",
-            appId: "1:560473593904:web:bc7c7de6727d97a74ff5f5",
-            measurementId: "G-F9T5P8TTSS"
-        };
-
-        // Inicializar Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const db = getDatabase(app);
-        
-        window.db = db;
-    </script>
-    
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        /* ========== TEMA OSCURO ========== */
-        body.dark-theme {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        }
-        
-        body.dark-theme .header,
-        body.dark-theme .form-section,
-        body.dark-theme .tickets-section,
-        body.dark-theme .modal-content {
-            background: #1e1e2f;
-        }
-        
-        body.dark-theme .logo h1 {
-            background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        body.dark-theme .logo p,
-        body.dark-theme .form-title,
-        body.dark-theme .modal-header h3 {
-            color: #eee;
-        }
-        
-        body.dark-theme label {
-            color: #ccc;
-        }
-        
-        body.dark-theme input,
-        body.dark-theme select,
-        body.dark-theme textarea {
-            background: #2d2d44;
-            color: #fff;
-            border-color: #444;
-        }
-        
-        body.dark-theme table th {
-            background: #2d2d44;
-            color: #eee;
-            border-color: #444;
-        }
-        
-        body.dark-theme td {
-            border-color: #444;
-            color: #ddd;
-        }
-        
-        body.dark-theme tr:hover {
-            background: #2d2d44;
-        }
-        
-        /* ========== CONTROL DE COLOR DE ICONOS ========== */
-        .stat-card i,
-        .tab-btn i,
-        .form-title i,
-        .btn-submit i,
-        .btn-view i,
-        .btn-edit i,
-        .btn-delete i,
-        .logo h1 i,
-        .logo p i,
-        .modal-header h3 i,
-        .loading i,
-        th i {
-            transition: color 0.3s ease;
-        }
-        
-        body.icon-dark .stat-card i,
-        body.icon-dark .tab-btn i,
-        body.icon-dark .form-title i,
-        body.icon-dark .logo h1 i,
-        body.icon-dark .logo p i,
-        body.icon-dark .modal-header h3 i,
-        body.icon-dark .loading i,
-        body.icon-dark th i {
-            color: #222 !important;
-        }
-        
-        .btn-view i,
-        .btn-edit i,
-        .btn-delete i,
-        .btn-submit i {
-            color: white !important;
-        }
-        
-        body.dark-theme .stat-card i,
-        body.dark-theme .tab-btn i,
-        body.dark-theme .form-title i,
-        body.dark-theme .logo h1 i,
-        body.dark-theme .logo p i,
-        body.dark-theme .modal-header h3 i,
-        body.dark-theme .loading i,
-        body.dark-theme th i {
-            color: white !important;
-        }
-        
-        .theme-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .theme-btn {
-            background: rgba(0,0,0,0.2);
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-        }
-        
-        .theme-btn:hover {
-            background: rgba(0,0,0,0.4);
-            transform: scale(1.05);
-        }
-        
-        .theme-btn i {
-            margin-right: 8px;
-            color: white !important;
-        }
-        
-        .container { max-width: 1400px; margin: 0 auto; }
-        .header {
-            background: white;
-            border-radius: 15px;
-            padding: 20px 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .logo h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 28px;
-        }
-        .logo p { color: #666; font-size: 14px; margin-top: 5px; }
-        .stats { display: flex; gap: 20px; }
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            text-align: center;
-            min-width: 100px;
-        }
-        .stat-card i { font-size: 24px; margin-bottom: 8px; display: block; }
-        .stat-number { font-size: 28px; font-weight: bold; }
-        .stat-label { font-size: 12px; opacity: 0.9; margin-top: 5px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
-        .tab-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            padding: 12px 30px;
-            border-radius: 10px;
-            color: white;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        .tab-btn i { margin-right: 8px; }
-        .tab-btn.active { background: white; color: #667eea; }
-        .tab-btn.active i { color: #667eea !important; }
-        .form-section, .tickets-section {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .form-title {
-            color: #333;
-            margin-bottom: 25px;
-            font-size: 24px;
-            border-left: 4px solid #667eea;
-            padding-left: 15px;
-        }
-        .form-title i { margin-right: 10px; color: #667eea; }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-        .form-group.full-width { grid-column: span 2; }
-        label { font-weight: 600; margin-bottom: 8px; color: #555; display: block; }
-        label i { margin-right: 6px; color: #667eea; }
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        textarea { min-height: 100px; resize: vertical; }
-        .btn-submit {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 14px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
-        }
-        .btn-submit i { margin-right: 8px; }
-        .tickets-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .search-box, .filter-select {
-            padding: 10px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-        }
-        .search-box { width: 250px; }
-        .tickets-table { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th {
-            background: #f8f9fa;
-            padding: 15px;
-            text-align: left;
-            border-bottom: 2px solid #e0e0e0;
-        }
-        th i { margin-right: 6px; color: #667eea; }
-        td { padding: 15px; border-bottom: 1px solid #e0e0e0; }
-        tr:hover { background: #f8f9fa; }
-        .status-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .status-badge:hover {
-            transform: scale(1.05);
-            filter: brightness(0.95);
-        }
-        .status-abierto { background: #ffeaa7; color: #d63031; }
-        .status-en-proceso { background: #74b9ff; color: #0984e3; }
-        .status-resuelto { background: #55efc4; color: #00b894; }
-        .status-cerrado { background: #dfe6e9; color: #636e72; }
-        .action-btns { display: flex; gap: 10px; }
-        .btn-view, .btn-delete {
-            padding: 5px 12px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        .btn-view i, .btn-delete i { margin-right: 5px; }
-        .btn-view { background: #74b9ff; color: white; }
-        .btn-delete { background: #ff7675; color: white; }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .modal-header h3 i { margin-right: 8px; color: #667eea; }
-        .close-modal { font-size: 28px; cursor: pointer; color: #999; }
-        .loading { text-align: center; padding: 40px; color: #667eea; }
-        .loading i { margin-right: 8px; }
-        
-        /* ========== SELECTOR DE ESTADOS (ARRIBA) ========== */
-        .status-selector {
-            position: fixed;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
-            z-index: 1001;
-            display: none;
-            animation: fadeIn 0.2s ease;
-            min-width: 160px;
-        }
-        
-        /* Cuando se despliega hacia ARRIBA */
-        .status-selector.up {
-            transform-origin: bottom center;
-        }
-        
-        /* Cuando se despliega hacia ABAJO (fallback) */
-        .status-selector.down {
-            transform-origin: top center;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        
-        .status-option {
-            padding: 12px 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: background 0.2s ease;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .status-option:last-child {
-            border-bottom: none;
-        }
-        
-        .status-option:hover {
-            background: #f0f0f0;
-        }
-        
-        .status-option .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        
-        .status-option.abierto .status-dot { background: #d63031; }
-        .status-option.en-proceso .status-dot { background: #0984e3; }
-        .status-option.resuelto .status-dot { background: #00b894; }
-        .status-option.cerrado .status-dot { background: #636e72; }
-        
-        body.dark-theme .status-selector {
-            background: #2d2d44;
-        }
-        
-        body.dark-theme .status-option {
-            border-bottom-color: #444;
-            color: #eee;
-        }
-        
-        body.dark-theme .status-option:hover {
-            background: #3d3d54;
-        }
-        
-        @media (max-width: 768px) {
-            .form-grid { grid-template-columns: 1fr; }
-            .form-group.full-width { grid-column: span 1; }
-            .stats { width: 100%; justify-content: space-between; }
-            .search-box { width: 100%; }
-            .header { flex-direction: column; text-align: center; }
-            .theme-controls { justify-content: center; }
-        }
-    </style>
+    <!-- Estilos CSS -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <!-- PANTALLA DE LOGIN -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h2><i class="fas fa-ticket-alt"></i> Amani Support</h2>
+            <p style="text-align: center; margin-bottom: 25px; color: #666;">Panel de administración</p>
+            
+            <div class="login-input-group">
+                <label><i class="fas fa-envelope"></i> Email</label>
+                <input type="email" id="loginEmail" placeholder="admin@amani.com" value="felixpa2001@gmail.com">
+            </div>
+            <div class="login-input-group">
+                <label><i class="fas fa-lock"></i> Contraseña</label>
+                <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña">
+            </div>
+            
+            <button class="login-btn" onclick="window.login()">
+                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+            </button>
+
+            <button type="button" class="google-btn" onclick="window.loginWithGoogle()">
+                <i class="fab fa-google"></i> Continuar con Google
+            </button>
+            
+            <div id="loginError" class="login-error"></div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD (protegido - solo visible después de login) -->
+    <div id="dashboard" class="dashboard-container" style="display: none;">
         <div class="header">
             <div class="logo">
                 <h1><i class="fas fa-ticket-alt"></i> Amani Support Desk</h1>
@@ -468,9 +73,55 @@
             </div>
         </div>
 
+        <div class="user-info">
+            <span class="user-email" id="userEmail"></span>
+            <button class="logout-btn" onclick="window.logout()">
+                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+            </button>
+        </div>
+
         <div class="tabs">
             <button class="tab-btn active" onclick="showTab('create')"><i class="fas fa-plus-circle"></i> Crear Ticket</button>
             <button class="tab-btn" onclick="showTab('view')"><i class="fas fa-list-ul"></i> Ver Tickets</button>
+        </div>
+
+        <div class="form-section">
+            <h2 class="form-title"><i class="fas fa-history"></i> Registro de cambios realizados</h2>
+            <form id="changeForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-pen"></i> Cambio realizado *</label>
+                        <input type="text" id="changeTitle" required placeholder="Ej: Se agregó login con Google">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Responsable *</label>
+                        <input type="text" id="changeResponsible" required placeholder="Tu nombre">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Tipo</label>
+                        <select id="changeType">
+                            <option value="Mejora">✨ Mejora</option>
+                            <option value="Corrección">🔧 Corrección</option>
+                            <option value="Nuevo feature">🚀 Nuevo feature</option>
+                            <option value="Documentación">📘 Documentación</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar-day"></i> Fecha</label>
+                        <input type="date" id="changeDate">
+                    </div>
+                    <div class="form-group full-width">
+                        <label><i class="fas fa-align-left"></i> Descripción del cambio *</label>
+                        <textarea id="changeDescription" required placeholder="Describe brevemente qué se modificó y por qué"></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Guardar cambio</button>
+            </form>
+
+            <div class="changes-list-container" id="changesListContainer">
+                <h3 class="changes-list-title"><i class="fas fa-list"></i> Cambios registrados</h3>
+                <div id="changesList" class="changes-list"></div>
+            </div>
         </div>
 
         <div id="createTab" class="form-section">
@@ -533,6 +184,7 @@
         </div>
     </div>
 
+    <!-- MODAL PARA VER DETALLES -->
     <div id="modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -543,7 +195,7 @@
         </div>
     </div>
 
-    <!-- Selector flotante de estados (se posicionará hacia arriba) -->
+    <!-- SELECTOR DE ESTADOS FLOTANTE -->
     <div id="statusSelector" class="status-selector">
         <div class="status-option abierto" data-estado="abierto">
             <span class="status-dot"></span>
@@ -563,321 +215,6 @@
         </div>
     </div>
 
-    <script type="module">
-        import { getDatabase, ref, push, set, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        
-        const db = getDatabase();
-        let tickets = [];
-        let currentTicketId = null;
-        
-        // ========== CONTROL DE COLOR DE ICONOS ==========
-        let iconosBlancos = true;
-        const toggleIconBtn = document.getElementById('toggleIconColor');
-        const toggleThemeBtn = document.getElementById('toggleTheme');
-        
-        if (toggleIconBtn) {
-            toggleIconBtn.addEventListener('click', () => {
-                if (iconosBlancos) {
-                    document.body.classList.add('icon-dark');
-                    toggleIconBtn.innerHTML = '<i class="fas fa-palette"></i> Iconos Blancos';
-                    iconosBlancos = false;
-                } else {
-                    document.body.classList.remove('icon-dark');
-                    toggleIconBtn.innerHTML = '<i class="fas fa-palette"></i> Iconos Negros';
-                    iconosBlancos = true;
-                }
-            });
-        }
-        
-        let temaOscuro = false;
-        if (toggleThemeBtn) {
-            toggleThemeBtn.addEventListener('click', () => {
-                if (temaOscuro) {
-                    document.body.classList.remove('dark-theme');
-                    toggleThemeBtn.innerHTML = '<i class="fas fa-moon"></i> Oscuro';
-                    temaOscuro = false;
-                } else {
-                    document.body.classList.add('dark-theme');
-                    toggleThemeBtn.innerHTML = '<i class="fas fa-sun"></i> Claro';
-                    temaOscuro = true;
-                }
-            });
-        }
-        
-        // ========== SELECTOR DE ESTADOS FLOTANTE (HACIA ARRIBA) ==========
-        const statusSelector = document.getElementById('statusSelector');
-        
-        function mostrarSelectorEstados(id, elemento) {
-            currentTicketId = id;
-            const rect = elemento.getBoundingClientRect();
-            const selectorHeight = 180; // Altura aproximada del selector (4 opciones)
-            const espacioArriba = rect.top;
-            const espacioAbajo = window.innerHeight - rect.bottom;
-            
-            // Limpiar clases previas
-            statusSelector.classList.remove('up', 'down');
-            
-            // Decidir hacia dónde desplegar
-            if (espacioArriba > selectorHeight) {
-                // Hay espacio arriba -> desplegar hacia ARRIBA
-                statusSelector.classList.add('up');
-                statusSelector.style.top = (rect.top - selectorHeight - 5) + 'px';
-                statusSelector.style.left = rect.left + 'px';
-            } else {
-                // No hay espacio arriba -> desplegar hacia ABAJO (con margin extra)
-                statusSelector.classList.add('down');
-                statusSelector.style.top = (rect.bottom + 8) + 'px';
-                statusSelector.style.left = rect.left + 'px';
-            }
-            
-            statusSelector.style.display = 'block';
-            
-            // Ajustar posición horizontal si se sale de la pantalla
-            const selectorRect = statusSelector.getBoundingClientRect();
-            if (selectorRect.right > window.innerWidth) {
-                statusSelector.style.left = (window.innerWidth - selectorRect.width - 10) + 'px';
-            }
-            if (selectorRect.left < 0) {
-                statusSelector.style.left = '10px';
-            }
-        }
-        
-        function ocultarSelectorEstados() {
-            statusSelector.style.display = 'none';
-            currentTicketId = null;
-        }
-        
-        // Configurar opciones del selector
-        document.querySelectorAll('.status-option').forEach(option => {
-            option.addEventListener('click', async () => {
-                const nuevoEstado = option.getAttribute('data-estado');
-                if (currentTicketId && nuevoEstado) {
-                    await actualizarEstado(currentTicketId, nuevoEstado);
-                }
-                ocultarSelectorEstados();
-            });
-        });
-        
-        // Cerrar selector al hacer clic fuera
-        document.addEventListener('click', (e) => {
-            if (!statusSelector.contains(e.target) && !e.target.classList.contains('status-badge')) {
-                ocultarSelectorEstados();
-            }
-        });
-        
-        // Cerrar con tecla ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                ocultarSelectorEstados();
-            }
-        });
-        
-        // ========== FUNCIÓN ACTUALIZAR ESTADO ==========
-        async function actualizarEstado(id, nuevoEstado) {
-            try {
-                await update(ref(db, `tickets/${id}`), { estado: nuevoEstado });
-                showToast(`Estado cambiado a ${getStatusText(nuevoEstado)}`);
-                
-                // Si el nuevo estado es "cerrado", eliminar automáticamente
-                if (nuevoEstado === 'cerrado') {
-                    showToast('🗑️ Ticket cerrado - será eliminado automáticamente');
-                    setTimeout(async () => {
-                        await remove(ref(db, `tickets/${id}`));
-                        showToast('✅ Ticket cerrado eliminado del sistema');
-                    }, 1500);
-                }
-            } catch (error) {
-                showToast('Error al actualizar: ' + error.message, true);
-            }
-        }
-        
-        function showToast(msg, isError = false) {
-            const toast = document.createElement('div');
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
-            toast.style.position = 'fixed';
-            toast.style.bottom = '20px';
-            toast.style.right = '20px';
-            toast.style.backgroundColor = isError ? '#ff7675' : '#4caf50';
-            toast.style.color = 'white';
-            toast.style.padding = '12px 24px';
-            toast.style.borderRadius = '8px';
-            toast.style.zIndex = '2000';
-            toast.style.fontFamily = 'Segoe UI, sans-serif';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function cargarTickets() {
-            const ticketsRef = ref(db, 'tickets');
-            
-            onValue(ticketsRef, (snapshot) => {
-                tickets = [];
-                
-                if (snapshot.exists()) {
-                    snapshot.forEach((child) => {
-                        const ticketData = child.val();
-                        // Solo agregar tickets que NO estén cerrados
-                        if (ticketData.estado !== 'cerrado') {
-                            tickets.push({
-                                id: child.key,
-                                ...ticketData
-                            });
-                        } else {
-                            // Si está cerrado, asegurar que se elimine de Firebase
-                            remove(ref(db, `tickets/${child.key}`)).catch(console.error);
-                        }
-                    });
-                    
-                    tickets.sort((a, b) => b.fecha - a.fecha);
-                }
-                
-                actualizarStats();
-                renderTickets();
-            });
-        }
-        
-        function actualizarStats() {
-            document.getElementById('totalTickets').textContent = tickets.length;
-            document.getElementById('ticketsAbiertos').textContent = tickets.filter(t => t.estado === 'abierto').length;
-            document.getElementById('ticketsResueltos').textContent = tickets.filter(t => t.estado === 'resuelto').length;
-        }
-        
-        function renderTickets() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const filter = document.getElementById('filterStatus').value;
-            let filtered = tickets.filter(t => 
-                (filter === 'all' || t.estado === filter) &&
-                (t.titulo?.toLowerCase().includes(search) || t.email?.toLowerCase().includes(search))
-            );
-            
-            const container = document.getElementById('ticketsList');
-            if (filtered.length === 0) {
-                container.innerHTML = '<div class="loading"><i class="fas fa-inbox"></i> No hay tickets</div>';
-                return;
-            }
-            
-            container.innerHTML = `
-                <table>
-                    <thead>
-                        <tr><th><i class="fas fa-hashtag"></i> ID</th><th><i class="fas fa-heading"></i> Título</th><th><i class="fas fa-tag"></i> Categoría</th><th><i class="fas fa-chart-simple"></i> Estado</th><th><i class="fas fa-envelope"></i> Email</th><th><i class="fas fa-calendar"></i> Fecha</th><th><i class="fas fa-cogs"></i> Acciones</th></tr>
-                    </thead>
-                    <tbody>
-                        ${filtered.map(t => `
-                            <tr>
-                                <td><code>${(t.id || '').substring(0,8)}...</code></td>
-                                <td><strong>${escapeHtml(t.titulo)}</strong></td>
-                                <td>${escapeHtml(t.categoria)}</td>
-                                <td><span class="status-badge status-${t.estado}" data-id="${t.id}" style="cursor: pointer;">${getStatusText(t.estado)}</span></td>
-                                <td>${escapeHtml(t.email)}</td>
-                                <td>${new Date(t.fecha).toLocaleDateString()}</td>
-                                <td class="action-btns">
-                                    <button class="btn-view" onclick="window.verTicket('${t.id}')"><i class="fas fa-eye"></i> Ver</button>
-                                    <button class="btn-delete" onclick="window.eliminarTicket('${t.id}')"><i class="fas fa-trash-alt"></i> Eliminar</button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            
-            // Agregar event listeners a los badges de estado
-            document.querySelectorAll('.status-badge').forEach(badge => {
-                badge.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const id = badge.getAttribute('data-id');
-                    mostrarSelectorEstados(id, badge);
-                });
-            });
-        }
-        
-        document.getElementById('ticketForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const titulo = document.getElementById('titulo').value.trim();
-            const categoria = document.getElementById('categoria').value;
-            const descripcion = document.getElementById('descripcion').value.trim();
-            const email = document.getElementById('email').value.trim();
-            
-            if (titulo.length < 5) return showToast('Título muy corto', true);
-            if (!categoria) return showToast('Selecciona categoría', true);
-            if (descripcion.length < 10) return showToast('Descripción muy corta', true);
-            if (!email.includes('@')) return showToast('Email inválido', true);
-            
-            try {
-                const ticketsRef = ref(db, 'tickets');
-                const newTicketRef = push(ticketsRef);
-                
-                await set(newTicketRef, {
-                    id: newTicketRef.key,
-                    titulo,
-                    categoria,
-                    descripcion,
-                    email,
-                    estado: 'abierto',
-                    respuestaAdmin: '',
-                    fecha: Date.now(),
-                    dispositivo: document.getElementById('dispositivo').value.trim() || 'Web',
-                    appVersion: document.getElementById('appVersion').value.trim() || 'Web v1.0'
-                });
-                
-                showToast('Ticket creado exitosamente');
-                document.getElementById('ticketForm').reset();
-                showTab('view');
-            } catch (error) {
-                showToast('Error: ' + error.message, true);
-            }
-        });
-        
-        window.verTicket = async (id) => {
-            try {
-                const snapshot = await get(ref(db, `tickets/${id}`));
-                if (snapshot.exists()) {
-                    const t = snapshot.val();
-                    document.getElementById('modalContent').innerHTML = `
-                        <p><i class="fas fa-hashtag"></i> <strong>ID:</strong> ${id}</p>
-                        <p><i class="fas fa-heading"></i> <strong>Título:</strong> ${escapeHtml(t.titulo)}</p>
-                        <p><i class="fas fa-tag"></i> <strong>Categoría:</strong> ${escapeHtml(t.categoria)}</p>
-                        <p><i class="fas fa-chart-simple"></i> <strong>Estado:</strong> ${getStatusText(t.estado)}</p>
-                        <p><i class="fas fa-align-left"></i> <strong>Descripción:</strong><br>${escapeHtml(t.descripcion)}</p>
-                        <p><i class="fas fa-envelope"></i> <strong>Email:</strong> ${escapeHtml(t.email)}</p>
-                        <p><i class="fas fa-mobile-alt"></i> <strong>Dispositivo:</strong> ${escapeHtml(t.dispositivo)}</p>
-                        <p><i class="fas fa-calendar"></i> <strong>Fecha:</strong> ${new Date(t.fecha).toLocaleString()}</p>
-                        ${t.respuestaAdmin ? `<p><i class="fas fa-reply"></i> <strong>Respuesta:</strong><br>${escapeHtml(t.respuestaAdmin)}</p>` : ''}
-                    `;
-                    document.getElementById('modal').style.display = 'flex';
-                } else {
-                    showToast('Ticket no encontrado', true);
-                }
-            } catch (error) {
-                showToast('Error al cargar ticket', true);
-            }
-        };
-        
-        window.eliminarTicket = async (id) => {
-            if (confirm('¿Eliminar este ticket?')) {
-                try {
-                    await remove(ref(db, `tickets/${id}`));
-                    showToast('Ticket eliminado');
-                } catch (error) {
-                    showToast('Error al eliminar', true);
-                }
-            }
-        };
-        
-        function escapeHtml(str) { return str?.replace(/[&<>]/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]; }) || ''; }
-        function getStatusText(s) { return { 'abierto':'🟡 Abierto','en-proceso':'🔵 En proceso','resuelto':'🟢 Resuelto','cerrado':'⚫ Cerrado' }[s] || s; }
-        
-        window.closeModal = () => document.getElementById('modal').style.display = 'none';
-        window.showTab = (tab) => {
-            document.getElementById('createTab').style.display = tab === 'create' ? 'block' : 'none';
-            document.getElementById('viewTab').style.display = tab === 'view' ? 'block' : 'none';
-            document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', (tab === 'create' && i === 0) || (tab === 'view' && i === 1)));
-        };
-        
-        document.getElementById('searchInput').addEventListener('input', renderTickets);
-        document.getElementById('filterStatus').addEventListener('change', renderTickets);
-        
-        cargarTickets();
-        showToast('Conectado a Realtime Database correctamente');
-    </script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
