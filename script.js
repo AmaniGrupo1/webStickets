@@ -1,12 +1,19 @@
 import { 
-    db, auth, ref, push, set, onValue, update, remove, get,
-    dbFirestore, collection, addDoc,
-    GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup,
-    onAuthStateChanged, signOut
+    db, auth, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, onSnapshot, query, orderBy,
+    signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from './firebase-config.js';
+
+import { 
+    getAuth as getAdminAuth, 
+    createUserWithEmailAndPassword,
+    updatePassword,
+    deleteUser
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 let tickets = [];
 let currentTicketId = null;
+let unsubscribeTickets = null;
+let usersList = [];
 
 // ========== FUNCIÓN PARA ALERTAS PERSONALIZADAS ==========
 function mostrarAlerta(titulo, mensaje, tipo) {
@@ -59,18 +66,49 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ========== MOSTRAR/OCULTAR CONTRASEÑA ==========
+function setupPasswordToggles() {
+    // Toggle para login
+    const toggleLogin = document.getElementById('togglePassword');
+    const loginPassword = document.getElementById('loginPassword');
+    if (toggleLogin && loginPassword) {
+        toggleLogin.addEventListener('click', () => {
+            const type = loginPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+            loginPassword.setAttribute('type', type);
+            toggleLogin.classList.toggle('fa-eye-slash');
+        });
+    }
+    
+    // Toggle para crear usuario
+    const toggleCreate = document.querySelector('#newUserPassword + .toggle-password');
+    const createPassword = document.getElementById('newUserPassword');
+    if (toggleCreate && createPassword) {
+        toggleCreate.addEventListener('click', () => {
+            const type = createPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+            createPassword.setAttribute('type', type);
+            toggleCreate.classList.toggle('fa-eye-slash');
+        });
+    }
+    
+    // Toggle para editar usuario (modal)
+    const toggleModal = document.querySelector('#editUserPassword + .toggle-password-modal');
+    const modalPassword = document.getElementById('editUserPassword');
+    if (toggleModal && modalPassword) {
+        toggleModal.addEventListener('click', () => {
+            const type = modalPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+            modalPassword.setAttribute('type', type);
+            toggleModal.classList.toggle('fa-eye-slash');
+        });
+    }
+}
+
 // Login con tecla Enter
 document.addEventListener('keydown', (e) => {
-
-    const loginVisible =
-        document.getElementById('loginScreen').style.display !== 'none';
-
+    const loginVisible = document.getElementById('loginScreen').style.display !== 'none';
     if (e.key === 'Enter' && loginVisible) {
         window.login();
     }
-
 });
-
 
 // ========== AUTENTICACIÓN ==========
 window.login = async () => {
@@ -105,6 +143,7 @@ window.login = async () => {
         await signInWithEmailAndPassword(auth, email, password);
         loadingAlert.remove();
         mostrarAlerta('✅ ¡Bienvenido!', `Sesión iniciada como ${email}`, 'success');
+        cargarUsuarios();
     } catch (error) {
         loadingAlert.remove();
         
@@ -157,11 +196,18 @@ onAuthStateChanged(auth, (user) => {
         dashboard.style.display = 'block';
         document.getElementById('userEmail').textContent = user.email;
         cargarTickets();
+        cargarUsuarios();
         renderChanges();
+        setupPasswordToggles();
     } else {
+        if (unsubscribeTickets) {
+            unsubscribeTickets();
+            unsubscribeTickets = null;
+        }
         loginScreen.style.display = 'flex';
         dashboard.style.display = 'none';
         tickets = [];
+        usersList = [];
     }
 });
 
@@ -198,6 +244,207 @@ if (toggleThemeBtn) {
         }
     });
 }
+
+// ========== GESTIÓN DE USUARIOS ==========
+// Crear usuario (requiere función cloud o backend)
+// NOTA: createUserWithEmailAndPassword no funciona desde cliente si está deshabilitado
+// Necesitas habilitar "Create" en Authentication > Settings > User actions
+
+async function cargarUsuarios() {
+    try {
+        // Esta función requiere un backend o Cloud Function
+        // Por ahora, mostramos los usuarios de Firestore
+        const usersCollection = collection(db, 'users');
+        const snapshot = await getDocs(usersCollection);
+        usersList = [];
+        snapshot.forEach(doc => {
+            usersList.push({ uid: doc.id, ...doc.data() });
+        });
+        
+        renderUsers();
+    } catch (error) {
+        console.error('Error al cargar usuarios:', error);
+        renderUsers();
+    }
+}
+
+function renderUsers() {
+    const container = document.getElementById('usersList');
+    if (!container) return;
+    
+    if (usersList.length === 0) {
+        container.innerHTML = '<div class="change-card-empty"><i class="fas fa-inbox"></i> No hay usuarios registrados</div>';
+        return;
+    }
+    
+    container.innerHTML = usersList.map(user => `
+        <div class="user-card">
+            <div class="user-card-info">
+                <i class="fas fa-user-circle"></i>
+                <div>
+                    <div class="user-email-display">${escapeHtml(user.email)}</div>
+                    <div class="user-id">UID: ${escapeHtml(user.uid?.substring(0, 12))}...</div>
+                </div>
+            </div>
+            <div class="user-card-actions">
+                <button class="btn-edit" onclick="window.editarUsuario('${user.uid}', '${escapeHtml(user.email)}')">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+                <button class="btn-delete" onclick="window.eliminarUsuario('${user.uid}')">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Crear usuario - Esto requiere una Cloud Function o tener habilitada la creación desde cliente
+document.getElementById('createUserForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('newUserEmail').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    
+    if (!email || !password) {
+        mostrarAlerta('❌ Error', 'Completa todos los campos', 'error');
+        return;
+    }
+    
+    if (password.length < 6) {
+        mostrarAlerta('❌ Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+    
+    const loadingAlert = document.createElement('div');
+    loadingAlert.innerHTML = `<div style="background: white; border-radius: 12px; padding: 20px;"><i class="fas fa-spinner fa-pulse"></i> Creando usuario...</div>`;
+    loadingAlert.style.position = 'fixed';
+    loadingAlert.style.top = '50%';
+    loadingAlert.style.left = '50%';
+    loadingAlert.style.transform = 'translate(-50%, -50%)';
+    loadingAlert.style.zIndex = '10000';
+    document.body.appendChild(loadingAlert);
+    
+    try {
+        // IMPORTANTE: Necesitas habilitar "Create" en Firebase Console
+        // Authentication → Settings → User actions → Enable Create (sign up)
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Guardar en Firestore
+        const usersCollection = collection(db, 'users');
+        await addDoc(usersCollection, {
+            uid: userCredential.user.uid,
+            email: email,
+            createdAt: Date.now()
+        });
+        
+        loadingAlert.remove();
+        mostrarAlerta('✅ Usuario creado', `Usuario ${email} creado exitosamente`, 'success');
+        document.getElementById('createUserForm').reset();
+        cargarUsuarios();
+        
+        // Registrar cambio
+        const changes = loadChanges();
+        changes.push({
+            title: `Usuario creado: ${email}`,
+            responsible: auth.currentUser?.email || 'Admin',
+            type: 'Nuevo feature',
+            date: new Date().toISOString().slice(0, 10),
+            description: `Se creó un nuevo usuario con email ${email}`,
+            createdAt: new Date().toISOString()
+        });
+        saveChanges(changes);
+        
+    } catch (error) {
+        loadingAlert.remove();
+        let mensaje = '';
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                mensaje = 'El email ya está registrado';
+                break;
+            case 'auth/weak-password':
+                mensaje = 'Contraseña débil, usa al menos 6 caracteres';
+                break;
+            case 'auth/operation-not-allowed':
+                mensaje = 'La creación de usuarios está deshabilitada. Habilítala en Firebase Console → Authentication → Settings → User actions → Enable Create';
+                break;
+            default:
+                mensaje = error.message;
+        }
+        mostrarAlerta('❌ Error', mensaje, 'error');
+    }
+});
+
+window.editarUsuario = (uid, email) => {
+    document.getElementById('editUserEmail').value = email;
+    document.getElementById('editUserPassword').value = '';
+    document.getElementById('userModal').style.display = 'flex';
+    
+    window.currentEditUid = uid;
+};
+
+window.closeUserModal = () => {
+    document.getElementById('userModal').style.display = 'none';
+    window.currentEditUid = null;
+};
+
+document.getElementById('editUserForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById('editUserPassword').value;
+    const uid = window.currentEditUid;
+    const email = document.getElementById('editUserEmail').value;
+    
+    if (!newPassword) {
+        mostrarAlerta('ℹ️ Sin cambios', 'No se proporcionó nueva contraseña', 'info');
+        closeUserModal();
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        mostrarAlerta('❌ Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+    
+    const loadingAlert = document.createElement('div');
+    loadingAlert.innerHTML = `<div style="background: white; border-radius: 12px; padding: 20px;"><i class="fas fa-spinner fa-pulse"></i> Actualizando usuario...</div>`;
+    loadingAlert.style.position = 'fixed';
+    loadingAlert.style.top = '50%';
+    loadingAlert.style.left = '50%';
+    loadingAlert.style.transform = 'translate(-50%, -50%)';
+    loadingAlert.style.zIndex = '10000';
+    document.body.appendChild(loadingAlert);
+    
+    try {
+        // NOTA: updatePassword requiere que el usuario esté autenticado RECIENTEMENTE
+        // Para admin, necesitas una Cloud Function
+        mostrarAlerta('⚠️ Limitación', 'Para cambiar contraseña de otro usuario, necesitas implementar una Cloud Function en Firebase', 'info');
+        loadingAlert.remove();
+        closeUserModal();
+    } catch (error) {
+        loadingAlert.remove();
+        mostrarAlerta('❌ Error', error.message, 'error');
+    }
+});
+
+window.eliminarUsuario = async (uid) => {
+    if (!confirm(`¿Eliminar este usuario? Esta acción es irreversible.`)) return;
+    
+    const loadingAlert = document.createElement('div');
+    loadingAlert.innerHTML = `<div style="background: white; border-radius: 12px; padding: 20px;"><i class="fas fa-spinner fa-pulse"></i> Eliminando usuario...</div>`;
+    loadingAlert.style.position = 'fixed';
+    loadingAlert.style.top = '50%';
+    loadingAlert.style.left = '50%';
+    loadingAlert.style.transform = 'translate(-50%, -50%)';
+    loadingAlert.style.zIndex = '10000';
+    document.body.appendChild(loadingAlert);
+    
+    try {
+        // NOTA: deleteUser requiere Cloud Function para admin
+        mostrarAlerta('⚠️ Limitación', 'Para eliminar usuarios, necesitas implementar una Cloud Function en Firebase', 'info');
+        loadingAlert.remove();
+    } catch (error) {
+        loadingAlert.remove();
+        mostrarAlerta('❌ Error', error.message, 'error');
+    }
+};
 
 // ========== SELECTOR DE ESTADOS FLOTANTE ==========
 const statusSelector = document.getElementById('statusSelector');
@@ -256,66 +503,78 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ========== FUNCIONES PRINCIPALES ==========
+// ========== FUNCIONES DE TICKETS ==========
 async function actualizarEstado(id, nuevoEstado) {
     try {
-        await update(ref(db, `tickets/${id}`), { estado: nuevoEstado });
+        const ticketRef = doc(db, 'tickets', id);
+        await updateDoc(ticketRef, { estado: nuevoEstado });
         mostrarAlerta('✅ Estado actualizado', `Ticket cambiado a ${getStatusText(nuevoEstado)}`, 'success');
         
         if (nuevoEstado === 'cerrado') {
             mostrarAlerta('🗑️ Ticket cerrado', 'El ticket será eliminado automáticamente', 'info');
             setTimeout(async () => {
-                await remove(ref(db, `tickets/${id}`));
+                await deleteDoc(ticketRef);
                 mostrarAlerta('✅ Eliminado', 'Ticket cerrado eliminado del sistema', 'success');
             }, 1500);
         }
     } catch (error) {
+        console.error('Error al actualizar estado:', error);
         mostrarAlerta('❌ Error', 'No se pudo actualizar el estado', 'error');
     }
 }
 
 function cargarTickets() {
-    const ticketsRef = ref(db, 'tickets');
+    const ticketsCollection = collection(db, 'tickets');
+    const q = query(ticketsCollection, orderBy('fecha', 'desc'));
     
-    onValue(ticketsRef, (snapshot) => {
+    if (unsubscribeTickets) {
+        unsubscribeTickets();
+    }
+    
+    unsubscribeTickets = onSnapshot(q, (snapshot) => {
         tickets = [];
         
-        if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-                const ticketData = child.val();
-                if (ticketData.estado !== 'cerrado') {
-                    tickets.push({
-                        id: child.key,
-                        ...ticketData
-                    });
-                } else {
-                    remove(ref(db, `tickets/${child.key}`)).catch(console.error);
-                }
-            });
-            
-            tickets.sort((a, b) => b.fecha - a.fecha);
-        }
+        snapshot.forEach((doc) => {
+            const ticketData = doc.data();
+            if (ticketData.estado !== 'cerrado') {
+                tickets.push({
+                    id: doc.id,
+                    ...ticketData
+                });
+            } else {
+                deleteDoc(doc.ref).catch(console.error);
+            }
+        });
         
         actualizarStats();
         renderTickets();
+    }, (error) => {
+        console.error('Error al cargar tickets:', error);
+        mostrarAlerta('❌ Error', 'No se pudieron cargar los tickets', 'error');
     });
 }
 
 function actualizarStats() {
-    document.getElementById('totalTickets').textContent = tickets.length;
-    document.getElementById('ticketsAbiertos').textContent = tickets.filter(t => t.estado === 'abierto').length;
-    document.getElementById('ticketsResueltos').textContent = tickets.filter(t => t.estado === 'resuelto').length;
+    const totalEl = document.getElementById('totalTickets');
+    const abiertosEl = document.getElementById('ticketsAbiertos');
+    const resueltosEl = document.getElementById('ticketsResueltos');
+    
+    if (totalEl) totalEl.textContent = tickets.length;
+    if (abiertosEl) abiertosEl.textContent = tickets.filter(t => t.estado === 'abierto').length;
+    if (resueltosEl) resueltosEl.textContent = tickets.filter(t => t.estado === 'resuelto').length;
 }
 
 function renderTickets() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const filter = document.getElementById('filterStatus').value;
+    const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const filter = document.getElementById('filterStatus')?.value || 'all';
     let filtered = tickets.filter(t => 
         (filter === 'all' || t.estado === filter) &&
         (t.titulo?.toLowerCase().includes(search) || t.email?.toLowerCase().includes(search))
     );
     
     const container = document.getElementById('ticketsList');
+    if (!container) return;
+    
     if (filtered.length === 0) {
         container.innerHTML = '<div class="loading"><i class="fas fa-inbox"></i> No hay tickets</div>';
         return;
@@ -334,10 +593,9 @@ function renderTickets() {
                         <td>${escapeHtml(t.categoria)}</td>
                         <td><span class="status-badge status-${t.estado}" data-id="${t.id}" style="cursor: pointer;">${getStatusText(t.estado)}</span></td>
                         <td>${escapeHtml(t.email)}</td>
-                        <td>${new Date(t.fecha).toLocaleDateString()}</td>
+                        <td>${t.fecha ? new Date(t.fecha).toLocaleDateString() : 'N/A'}</td>
                         <td class="action-btns">
                             <button class="btn-view" onclick="window.verTicket('${t.id}')"><i class="fas fa-eye"></i> Ver</button>
-                            <button class="btn-delete" onclick="window.eliminarTicket('${t.id}')"><i class="fas fa-trash-alt"></i> Eliminar</button>
                         </td>
                     </tr>
                 `).join('')}
@@ -354,77 +612,7 @@ function renderTickets() {
     });
 }
 
-// ========== FORMULARIO DE TICKETS ==========
-document.getElementById('ticketForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const titulo = document.getElementById('titulo').value.trim();
-    const categoria = document.getElementById('categoria').value;
-    const descripcion = document.getElementById('descripcion').value.trim();
-    const email = document.getElementById('email').value.trim();
-    
-    if (titulo.length < 5) {
-        mostrarAlerta('❌ Error', 'Título muy corto (mínimo 5 caracteres)', 'error');
-        return;
-    }
-    if (!categoria) {
-        mostrarAlerta('❌ Error', 'Selecciona una categoría', 'error');
-        return;
-    }
-    if (descripcion.length < 10) {
-        mostrarAlerta('❌ Error', 'Descripción muy corta (mínimo 10 caracteres)', 'error');
-        return;
-    }
-    if (!email.includes('@')) {
-        mostrarAlerta('❌ Error', 'Email inválido', 'error');
-        return;
-    }
-    
-    try {
-        const ticketsRef = ref(db, 'tickets');
-        const newTicketRef = push(ticketsRef);
-        
-        await set(newTicketRef, {
-            id: newTicketRef.key,
-            titulo,
-            categoria,
-            descripcion,
-            email,
-            estado: 'abierto',
-            respuestaAdmin: '',
-            fecha: Date.now(),
-            dispositivo: document.getElementById('dispositivo').value.trim() || 'Web',
-            appVersion: document.getElementById('appVersion').value.trim() || 'Web v1.0'
-        });
-        
-        // Trigger Email from Firestore
-        try {
-            await addDoc(collection(dbFirestore, 'mail'), {
-                to: email, // Se envía al correo del usuario que crea el ticket
-                message: {
-                  subject: `Ticket Creado Exitosamente: ${titulo}`,
-                  html: `
-                    <h3>Hola, hemos recibido tu ticket.</h3>
-                    <p><strong>ID del Ticket:</strong> ${newTicketRef.key}</p>
-                    <p><strong>Título:</strong> ${titulo}</p>
-                    <p><strong>Categoría:</strong> ${categoria}</p>
-                    <p><strong>Descripción:</strong><br>${descripcion}</p>
-                    <p>En breve, un administrador revisará tu solicitud.</p>
-                  `
-                }
-            });
-        } catch (mailError) {
-            console.error('Error al programar el correo:', mailError);
-        }
-        
-        mostrarAlerta('✅ Ticket creado', 'El ticket ha sido creado exitosamente', 'success');
-        document.getElementById('ticketForm').reset();
-        showTab('view');
-    } catch (error) {
-        mostrarAlerta('❌ Error', 'No se pudo crear el ticket', 'error');
-    }
-});
-
-// ========== REGISTRO DE CAMBIOS (localStorage) ==========
+// ========== REGISTRO DE CAMBIOS ==========
 const CHANGES_STORAGE_KEY = 'amani-changes-log';
 
 function loadChanges() {
@@ -443,6 +631,8 @@ function renderChanges() {
     const container = document.getElementById('changesList');
     const changes = loadChanges();
 
+    if (!container) return;
+    
     if (!changes.length) {
         container.innerHTML = '<div class="change-card-empty"><i class="fas fa-inbox"></i> Aún no hay cambios registrados.</div>';
         return;
@@ -467,7 +657,6 @@ function renderChanges() {
         `).join('');
 }
 
-// Evento del formulario de cambios
 const changeForm = document.getElementById('changeForm');
 if (changeForm) {
     changeForm.addEventListener('submit', (e) => {
@@ -507,16 +696,17 @@ if (changeForm) {
 
 // ========== CONTROL DE PESTAÑAS ==========
 window.showTab = (tab) => {
-    const createTab = document.getElementById('createTab');
+    const usersTab = document.getElementById('usersTab');
     const viewTab = document.getElementById('viewTab');
     const changesTab = document.getElementById('changesTab');
     
-    if (createTab) createTab.style.display = 'none';
+    if (usersTab) usersTab.style.display = 'none';
     if (viewTab) viewTab.style.display = 'none';
     if (changesTab) changesTab.style.display = 'none';
     
-    if (tab === 'create') {
-        if (createTab) createTab.style.display = 'block';
+    if (tab === 'users') {
+        if (usersTab) usersTab.style.display = 'block';
+        cargarUsuarios();
     } else if (tab === 'view') {
         if (viewTab) viewTab.style.display = 'block';
         renderTickets();
@@ -526,11 +716,11 @@ window.showTab = (tab) => {
     }
     
     document.querySelectorAll('.tab-btn').forEach((btn) => {
-        const isCreate = btn.textContent.includes('Crear Ticket');
+        const isUsers = btn.textContent.includes('Usuarios');
         const isView = btn.textContent.includes('Ver Tickets');
         const isChanges = btn.textContent.includes('Registro de Cambios');
         
-        if ((tab === 'create' && isCreate) || 
+        if ((tab === 'users' && isUsers) || 
             (tab === 'view' && isView) || 
             (tab === 'changes' && isChanges)) {
             btn.classList.add('active');
@@ -543,9 +733,11 @@ window.showTab = (tab) => {
 // ========== FUNCIONES DE TICKETS ==========
 window.verTicket = async (id) => {
     try {
-        const snapshot = await get(ref(db, `tickets/${id}`));
-        if (snapshot.exists()) {
-            const t = snapshot.val();
+        const ticketRef = doc(db, 'tickets', id);
+        const docSnap = await getDoc(ticketRef);
+        
+        if (docSnap.exists()) {
+            const t = docSnap.data();
             document.getElementById('modalContent').innerHTML = `
                 <p><i class="fas fa-hashtag"></i> <strong>ID:</strong> ${id}</p>
                 <p><i class="fas fa-heading"></i> <strong>Título:</strong> ${escapeHtml(t.titulo)}</p>
@@ -554,7 +746,7 @@ window.verTicket = async (id) => {
                 <p><i class="fas fa-align-left"></i> <strong>Descripción:</strong><br>${escapeHtml(t.descripcion)}</p>
                 <p><i class="fas fa-envelope"></i> <strong>Email:</strong> ${escapeHtml(t.email)}</p>
                 <p><i class="fas fa-mobile-alt"></i> <strong>Dispositivo:</strong> ${escapeHtml(t.dispositivo)}</p>
-                <p><i class="fas fa-calendar"></i> <strong>Fecha:</strong> ${new Date(t.fecha).toLocaleString()}</p>
+                <p><i class="fas fa-calendar"></i> <strong>Fecha:</strong> ${t.fecha ? new Date(t.fecha).toLocaleString() : 'N/A'}</p>
                 ${t.respuestaAdmin ? `<p><i class="fas fa-reply"></i> <strong>Respuesta:</strong><br>${escapeHtml(t.respuestaAdmin)}</p>` : ''}
             `;
             document.getElementById('modal').style.display = 'flex';
@@ -562,18 +754,8 @@ window.verTicket = async (id) => {
             mostrarAlerta('❌ Error', 'Ticket no encontrado', 'error');
         }
     } catch (error) {
+        console.error('Error al ver ticket:', error);
         mostrarAlerta('❌ Error', 'No se pudo cargar el ticket', 'error');
-    }
-};
-
-window.eliminarTicket = async (id) => {
-    if (confirm('¿Eliminar este ticket?')) {
-        try {
-            await remove(ref(db, `tickets/${id}`));
-            mostrarAlerta('🗑️ Ticket eliminado', 'El ticket ha sido eliminado', 'info');
-        } catch (error) {
-            mostrarAlerta('❌ Error', 'No se pudo eliminar el ticket', 'error');
-        }
     }
 };
 
@@ -596,11 +778,10 @@ function getStatusText(s) {
     }[s] || s; 
 }
 
-// Event listeners para búsqueda y filtro
 const searchInput = document.getElementById('searchInput');
 const filterStatus = document.getElementById('filterStatus');
 
 if (searchInput) searchInput.addEventListener('input', renderTickets);
 if (filterStatus) filterStatus.addEventListener('change', renderTickets);
 
-console.log('🔥 Sistema listo - esperando login');
+console.log('🔥 Sistema listo con Firestore y gestión de usuarios');
