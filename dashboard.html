@@ -30,10 +30,6 @@
             <button class="login-btn" onclick="window.login()">
                 <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
             </button>
-
-            <button type="button" class="google-btn" onclick="window.loginWithGoogle()">
-                <i class="fab fa-google"></i> Continuar con Google
-            </button>
             
             <div id="loginError" class="login-error"></div>
         </div>
@@ -41,6 +37,19 @@
 
     <!-- DASHBOARD (protegido - solo visible después de login) -->
     <div id="dashboard" class="dashboard-container" style="display: none;">
+
+         <!-- Barra superior con usuario y cerrar sesión -->
+        <div class="user-info-bar">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span id="userEmail" class="user-email"></span>
+            </div>
+            <button class="logout-btn" onclick="window.logout()">
+                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+            </button>
+        </div>
+        
+        <!-- Header con estadísticas y controles -->
         <div class="header">
             <div class="logo">
                 <h1><i class="fas fa-ticket-alt"></i> Amani Support Desk</h1>
@@ -71,13 +80,6 @@
                     <i class="fas fa-moon"></i> Oscuro
                 </button>
             </div>
-        </div>
-
-        <div class="user-info">
-            <span class="user-email" id="userEmail"></span>
-            <button class="logout-btn" onclick="window.logout()">
-                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-            </button>
         </div>
 
         <div class="tabs">
