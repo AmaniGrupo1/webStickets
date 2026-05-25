@@ -1,5 +1,6 @@
 import { 
     db, auth, ref, push, set, onValue, update, remove, get,
+    dbFirestore, collection, addDoc,
     GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup,
     onAuthStateChanged, signOut
 } from './firebase-config.js';
@@ -394,6 +395,26 @@ document.getElementById('ticketForm').addEventListener('submit', async (e) => {
             dispositivo: document.getElementById('dispositivo').value.trim() || 'Web',
             appVersion: document.getElementById('appVersion').value.trim() || 'Web v1.0'
         });
+        
+        // Trigger Email from Firestore
+        try {
+            await addDoc(collection(dbFirestore, 'mail'), {
+                to: email, // Se envía al correo del usuario que crea el ticket
+                message: {
+                  subject: `Ticket Creado Exitosamente: ${titulo}`,
+                  html: `
+                    <h3>Hola, hemos recibido tu ticket.</h3>
+                    <p><strong>ID del Ticket:</strong> ${newTicketRef.key}</p>
+                    <p><strong>Título:</strong> ${titulo}</p>
+                    <p><strong>Categoría:</strong> ${categoria}</p>
+                    <p><strong>Descripción:</strong><br>${descripcion}</p>
+                    <p>En breve, un administrador revisará tu solicitud.</p>
+                  `
+                }
+            });
+        } catch (mailError) {
+            console.error('Error al programar el correo:', mailError);
+        }
         
         mostrarAlerta('✅ Ticket creado', 'El ticket ha sido creado exitosamente', 'success');
         document.getElementById('ticketForm').reset();
