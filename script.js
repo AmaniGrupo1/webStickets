@@ -6,8 +6,6 @@ import {
 
 let tickets = [];
 let currentTicketId = null;
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // ========== FUNCIÓN PARA ALERTAS PERSONALIZADAS ==========
 function mostrarAlerta(titulo, mensaje, tipo) {
@@ -59,6 +57,19 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Login con tecla Enter
+document.addEventListener('keydown', (e) => {
+
+    const loginVisible =
+        document.getElementById('loginScreen').style.display !== 'none';
+
+    if (e.key === 'Enter' && loginVisible) {
+        window.login();
+    }
+
+});
+
 
 // ========== AUTENTICACIÓN ==========
 window.login = async () => {
@@ -135,37 +146,6 @@ window.logout = async () => {
     }
 };
 
-window.loginWithGoogle = async () => {
-    const loadingAlert = document.createElement('div');
-    loadingAlert.innerHTML = `
-        <div style="background: white; border-radius: 12px; padding: 20px 25px; display: flex; align-items: center; gap: 15px;">
-            <i class="fas fa-spinner fa-pulse" style="font-size: 24px; color: #667eea;"></i>
-            <span style="color: #333;">Abriendo Google para iniciar sesión...</span>
-        </div>
-    `;
-    loadingAlert.style.position = 'fixed';
-    loadingAlert.style.top = '50%';
-    loadingAlert.style.left = '50%';
-    loadingAlert.style.transform = 'translate(-50%, -50%)';
-    loadingAlert.style.zIndex = '10000';
-    document.body.appendChild(loadingAlert);
-
-    try {
-        await signInWithPopup(auth, googleProvider);
-        loadingAlert.remove();
-        mostrarAlerta('✅ ¡Bienvenido!', 'Sesión iniciada con Google correctamente', 'success');
-    } catch (error) {
-        loadingAlert.remove();
-
-        if (error.code === 'auth/popup-closed-by-user') {
-            mostrarAlerta('ℹ️ Cancelado', 'Cerraste la ventana de Google sin completar el inicio de sesión', 'info');
-            return;
-        }
-
-        mostrarAlerta('❌ Error', error.message || 'No se pudo iniciar sesión con Google', 'error');
-    }
-};
-
 // Verificar estado de autenticación
 onAuthStateChanged(auth, (user) => {
     const loginScreen = document.getElementById('loginScreen');
@@ -174,7 +154,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         loginScreen.style.display = 'none';
         dashboard.style.display = 'block';
-        document.getElementById('userEmail').innerHTML = `<i class="fas fa-user-circle"></i> ${user.email}`;
+        document.getElementById('userEmail').textContent = user.email;
         cargarTickets();
         renderChanges();
     } else {
