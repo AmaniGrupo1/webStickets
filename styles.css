@@ -97,31 +97,6 @@ body {
     margin-right: 8px;
 }
 
-.google-btn {
-    width: 100%;
-    padding: 12px;
-    margin-top: 15px;
-    background: #fff;
-    color: #444;
-    border: 2px solid #dadce0;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.google-btn:hover {
-    transform: translateY(-2px);
-    border-color: #c4c7cc;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-}
-
-.google-btn i {
-    margin-right: 8px;
-    color: #ea4335;
-}
-
 .login-error {
     background: #fee;
     color: #c33;
@@ -159,14 +134,16 @@ body.dark-theme .login-box,
 body.dark-theme .header,
 body.dark-theme .form-section,
 body.dark-theme .tickets-section,
-body.dark-theme .modal-content {
+body.dark-theme .modal-content,
+body.dark-theme .user-info-bar {
     background: #1e1e2f;
 }
 
 body.dark-theme .login-box h2,
 body.dark-theme .logo p,
 body.dark-theme .form-title,
-body.dark-theme .modal-header h3 {
+body.dark-theme .modal-header h3,
+body.dark-theme .user-email {
     color: #eee;
 }
 
@@ -261,7 +238,7 @@ body.icon-dark th i {
     background: white;
     border-radius: 15px;
     padding: 20px 30px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: space-between;
@@ -289,16 +266,28 @@ body.icon-dark th i {
     margin-right: 8px;
 }
 
-.user-info {
+/* Nueva barra superior de usuario */
+.user-info-bar {
+    background: white;
+    border-radius: 15px;
+    padding: 12px 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
-    padding: 10px 20px;
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    gap: 20px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info i {
+    font-size: 20px;
+    color: #667eea;
 }
 
 .user-email {
@@ -307,15 +296,11 @@ body.icon-dark th i {
     font-weight: 600;
 }
 
-.user-email i {
-    margin-right: 8px;
-}
-
 .logout-btn {
     background: #ff7675;
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 8px 20px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
@@ -832,7 +817,7 @@ tr:hover {
     .theme-controls {
         justify-content: center;
     }
-    .user-info {
+    .user-info-bar {
         justify-content: center;
     }
 }
