@@ -24,7 +24,10 @@
             </div>
             <div class="login-input-group">
                 <label><i class="fas fa-lock"></i> Contraseña</label>
-                <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña">
+                <div style="position: relative;">
+                    <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña">
+                    <i class="fas fa-eye" id="togglePassword" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #667eea;"></i>
+                </div>
             </div>
             
             <button class="login-btn" onclick="window.login()">
@@ -38,7 +41,7 @@
     <!-- DASHBOARD (protegido - solo visible después de login) -->
     <div id="dashboard" class="dashboard-container" style="display: none;">
 
-         <!-- Barra superior con usuario y cerrar sesión -->
+        <!-- Barra superior con usuario y cerrar sesión -->
         <div class="user-info-bar">
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
@@ -53,7 +56,7 @@
         <div class="header">
             <div class="logo">
                 <h1><i class="fas fa-ticket-alt"></i> Amani Support Desk</h1>
-                <p><i class="fas fa-database"></i> Dashboard de gestión de tickets | Conectado a Realtime Database</p>
+                <p><i class="fas fa-database"></i> Dashboard de gestión de tickets | Conectado a Firestore</p>
             </div>
             <div class="stats">
                 <div class="stat-card">
@@ -83,50 +86,43 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('create')"><i class="fas fa-plus-circle"></i> Crear Ticket</button>
+            <button class="tab-btn active" onclick="showTab('users')"><i class="fas fa-users"></i> Usuarios</button>
             <button class="tab-btn" onclick="showTab('view')"><i class="fas fa-list-ul"></i> Ver Tickets</button>
             <button class="tab-btn" onclick="showTab('changes')"><i class="fas fa-history"></i> Registro de Cambios</button>
         </div>
 
-        <!-- Pestaña Crear Ticket -->
-        <div id="createTab" class="form-section">
-            <h2 class="form-title"><i class="fas fa-edit"></i> Crear nuevo ticket</h2>
-            <form id="ticketForm">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label><i class="fas fa-heading"></i> Título *</label>
-                        <input type="text" id="titulo" required placeholder="Breve descripción del problema">
+        <!-- Pestaña Usuarios (Admin) -->
+        <div id="usersTab" class="form-section">
+            <h2 class="form-title"><i class="fas fa-user-plus"></i> Gestión de Usuarios</h2>
+            
+            <!-- Formulario para crear usuario -->
+            <div class="user-form-container">
+                <h3><i class="fas fa-plus-circle"></i> Crear nuevo usuario</h3>
+                <form id="createUserForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label><i class="fas fa-envelope"></i> Email *</label>
+                            <input type="email" id="newUserEmail" required placeholder="usuario@ejemplo.com">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-lock"></i> Contraseña *</label>
+                            <div style="position: relative;">
+                                <input type="password" id="newUserPassword" required placeholder="Mínimo 6 caracteres">
+                                <i class="fas fa-eye toggle-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #667eea;"></i>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-tag"></i> Categoría *</label>
-                        <select id="categoria" required>
-                            <option value="">Seleccionar</option>
-                            <option value="Error técnico">🔧 Error técnico</option>
-                            <option value="Problema de cuenta">👤 Problema de cuenta</option>
-                            <option value="Pago">💰 Pago</option>
-                            <option value="Sugerencia">💡 Sugerencia</option>
-                            <option value="Otro">📌 Otro</option>
-                        </select>
-                    </div>
-                    <div class="form-group full-width">
-                        <label><i class="fas fa-align-left"></i> Descripción *</label>
-                        <textarea id="descripcion" required placeholder="Describe detalladamente el problema..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-envelope"></i> Email *</label>
-                        <input type="email" id="email" required placeholder="tu@email.com">
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-mobile-alt"></i> Dispositivo</label>
-                        <input type="text" id="dispositivo" placeholder="Ej: iPhone 12, PC Windows...">
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-code-branch"></i> Versión App</label>
-                        <input type="text" id="appVersion" placeholder="v1.0.0">
-                    </div>
+                    <button type="submit" class="btn-submit"><i class="fas fa-user-plus"></i> Crear Usuario</button>
+                </form>
+            </div>
+
+            <!-- Lista de usuarios -->
+            <div class="users-list-container">
+                <h3><i class="fas fa-list"></i> Usuarios registrados</h3>
+                <div id="usersList" class="users-list">
+                    <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Cargando usuarios...</div>
                 </div>
-                <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i> Enviar Ticket</button>
-            </form>
+            </div>
         </div>
 
         <!-- Pestaña Ver Tickets -->
@@ -145,7 +141,7 @@
                 </div>
             </div>
             <div id="ticketsList" class="tickets-table">
-                <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Cargando tickets desde Realtime Database...</div>
+                <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Cargando tickets desde Firestore...</div>
             </div>
         </div>
 
@@ -157,7 +153,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label><i class="fas fa-pen"></i> Cambio realizado *</label>
-                        <input type="text" id="changeTitle" required placeholder="Ej: Se agregó login con Google">
+                        <input type="text" id="changeTitle" required placeholder="Ej: Se agregó gestión de usuarios">
                     </div>
                     <div class="form-group">
                         <label><i class="fas fa-user"></i> Responsable *</label>
@@ -191,7 +187,31 @@
         </div>
     </div>
 
-    <!-- MODAL PARA VER DETALLES -->
+    <!-- MODAL PARA EDITAR USUARIO -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Editar Usuario</h3>
+                <span class="close-modal" onclick="closeUserModal()">&times;</span>
+            </div>
+            <form id="editUserForm">
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="editUserEmail" readonly style="background: #f0f0f0;">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Nueva Contraseña (opcional)</label>
+                    <div style="position: relative;">
+                        <input type="password" id="editUserPassword" placeholder="Dejar en blanco para mantener actual">
+                        <i class="fas fa-eye toggle-password-modal" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #667eea;"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PARA VER DETALLES DEL TICKET -->
     <div id="modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
