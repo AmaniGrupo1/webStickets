@@ -11,7 +11,6 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // ========== FUNCIÓN PARA ALERTAS PERSONALIZADAS ==========
 function mostrarAlerta(titulo, mensaje, tipo) {
-    // Crear elemento de alerta flotante
     const alerta = document.createElement('div');
     const icono = tipo === 'error' ? 'fa-times-circle' : (tipo === 'success' ? 'fa-check-circle' : 'fa-info-circle');
     const color = tipo === 'error' ? '#ff7675' : (tipo === 'success' ? '#4caf50' : '#667eea');
@@ -45,14 +44,13 @@ function mostrarAlerta(titulo, mensaje, tipo) {
     
     document.body.appendChild(alerta);
     
-    // Auto-cerrar después de 3 segundos
     setTimeout(() => {
         alerta.style.animation = 'fadeOut 0.3s ease';
         setTimeout(() => alerta.remove(), 300);
     }, 3000);
 }
 
-// Agregar animación fadeOut si no existe
+// Agregar animaciones
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fadeOut {
@@ -62,7 +60,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// ========== AUTENTICACIÓN CON ALERTAS ==========
+// ========== AUTENTICACIÓN ==========
 window.login = async () => {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -77,7 +75,6 @@ window.login = async () => {
         return;
     }
     
-    // Mostrar alerta de carga
     const loadingAlert = document.createElement('div');
     loadingAlert.innerHTML = `
         <div style="background: white; border-radius: 12px; padding: 20px 25px; display: flex; align-items: center; gap: 15px;">
@@ -125,8 +122,6 @@ window.login = async () => {
         mostrarAlerta(titulo, mensaje, 'error');
         errorDiv.textContent = mensaje;
         errorDiv.style.display = 'block';
-        
-        // Limpiar campo contraseña por seguridad
         document.getElementById('loginPassword').value = '';
     }
 };
@@ -181,6 +176,7 @@ onAuthStateChanged(auth, (user) => {
         dashboard.style.display = 'block';
         document.getElementById('userEmail').innerHTML = `<i class="fas fa-user-circle"></i> ${user.email}`;
         cargarTickets();
+        renderChanges();
     } else {
         loginScreen.style.display = 'flex';
         dashboard.style.display = 'none';
@@ -297,23 +293,6 @@ async function actualizarEstado(id, nuevoEstado) {
     }
 }
 
-function showToast(msg, isError = false) {
-    const toast = document.createElement('div');
-    toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
-    toast.style.position = 'fixed';
-    toast.style.bottom = '20px';
-    toast.style.right = '20px';
-    toast.style.backgroundColor = isError ? '#ff7675' : '#4caf50';
-    toast.style.color = 'white';
-    toast.style.padding = '12px 24px';
-    toast.style.borderRadius = '8px';
-    toast.style.zIndex = '2000';
-    toast.style.fontFamily = 'Segoe UI, sans-serif';
-    toast.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
 function cargarTickets() {
     const ticketsRef = ref(db, 'tickets');
     
@@ -394,6 +373,7 @@ function renderTickets() {
     });
 }
 
+// ========== FORMULARIO DE TICKETS ==========
 document.getElementById('ticketForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const titulo = document.getElementById('titulo').value.trim();
@@ -401,10 +381,22 @@ document.getElementById('ticketForm').addEventListener('submit', async (e) => {
     const descripcion = document.getElementById('descripcion').value.trim();
     const email = document.getElementById('email').value.trim();
     
-    if (titulo.length < 5) return showToast('Título muy corto', true);
-    if (!categoria) return showToast('Selecciona categoría', true);
-    if (descripcion.length < 10) return showToast('Descripción muy corta', true);
-    if (!email.includes('@')) return showToast('Email inválido', true);
+    if (titulo.length < 5) {
+        mostrarAlerta('❌ Error', 'Título muy corto (mínimo 5 caracteres)', 'error');
+        return;
+    }
+    if (!categoria) {
+        mostrarAlerta('❌ Error', 'Selecciona una categoría', 'error');
+        return;
+    }
+    if (descripcion.length < 10) {
+        mostrarAlerta('❌ Error', 'Descripción muy corta (mínimo 10 caracteres)', 'error');
+        return;
+    }
+    if (!email.includes('@')) {
+        mostrarAlerta('❌ Error', 'Email inválido', 'error');
+        return;
+    }
     
     try {
         const ticketsRef = ref(db, 'tickets');
@@ -431,6 +423,7 @@ document.getElementById('ticketForm').addEventListener('submit', async (e) => {
     }
 });
 
+// ========== REGISTRO DE CAMBIOS (localStorage) ==========
 const CHANGES_STORAGE_KEY = 'amani-changes-log';
 
 function loadChanges() {
@@ -473,38 +466,80 @@ function renderChanges() {
         `).join('');
 }
 
-document.getElementById('changeForm').addEventListener('submit', (e) => {
-    e.preventDefault();
+// Evento del formulario de cambios
+const changeForm = document.getElementById('changeForm');
+if (changeForm) {
+    changeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
 
-    const title = document.getElementById('changeTitle').value.trim();
-    const responsible = document.getElementById('changeResponsible').value.trim();
-    const description = document.getElementById('changeDescription').value.trim();
-    const type = document.getElementById('changeType').value;
-    const date = document.getElementById('changeDate').value || new Date().toISOString().slice(0, 10);
+        const title = document.getElementById('changeTitle').value.trim();
+        const responsible = document.getElementById('changeResponsible').value.trim();
+        const description = document.getElementById('changeDescription').value.trim();
+        const type = document.getElementById('changeType').value;
+        const date = document.getElementById('changeDate').value || new Date().toISOString().slice(0, 10);
 
-    if (!title || !responsible || !description) {
-        showToast('Completa los campos obligatorios', true);
-        return;
-    }
+        if (!title || !responsible || !description) {
+            mostrarAlerta('⚠️ Campos incompletos', 'Completa los campos obligatorios', 'error');
+            return;
+        }
 
-    const changes = loadChanges();
-    changes.push({
-        title,
-        responsible,
-        type,
-        date,
-        description,
-        createdAt: new Date().toISOString()
+        const changes = loadChanges();
+        changes.push({
+            title,
+            responsible,
+            type,
+            date,
+            description,
+            createdAt: new Date().toISOString()
+        });
+
+        saveChanges(changes);
+        renderChanges();
+        
+        document.getElementById('changeForm').reset();
+        document.getElementById('changeType').value = 'Mejora';
+        document.getElementById('changeDate').value = '';
+        
+        mostrarAlerta('✅ Cambio guardado', 'El registro se guardó correctamente', 'success');
     });
+}
 
-    saveChanges(changes);
-    renderChanges();
-    document.getElementById('changeForm').reset();
-    document.getElementById('changeType').value = 'Mejora';
-    document.getElementById('changeDate').value = '';
-    mostrarAlerta('✅ Cambio guardado', 'El registro se guardó correctamente en este navegador', 'success');
-});
+// ========== CONTROL DE PESTAÑAS ==========
+window.showTab = (tab) => {
+    const createTab = document.getElementById('createTab');
+    const viewTab = document.getElementById('viewTab');
+    const changesTab = document.getElementById('changesTab');
+    
+    if (createTab) createTab.style.display = 'none';
+    if (viewTab) viewTab.style.display = 'none';
+    if (changesTab) changesTab.style.display = 'none';
+    
+    if (tab === 'create') {
+        if (createTab) createTab.style.display = 'block';
+    } else if (tab === 'view') {
+        if (viewTab) viewTab.style.display = 'block';
+        renderTickets();
+    } else if (tab === 'changes') {
+        if (changesTab) changesTab.style.display = 'block';
+        renderChanges();
+    }
+    
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+        const isCreate = btn.textContent.includes('Crear Ticket');
+        const isView = btn.textContent.includes('Ver Tickets');
+        const isChanges = btn.textContent.includes('Registro de Cambios');
+        
+        if ((tab === 'create' && isCreate) || 
+            (tab === 'view' && isView) || 
+            (tab === 'changes' && isChanges)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+};
 
+// ========== FUNCIONES DE TICKETS ==========
 window.verTicket = async (id) => {
     try {
         const snapshot = await get(ref(db, `tickets/${id}`));
@@ -541,6 +576,10 @@ window.eliminarTicket = async (id) => {
     }
 };
 
+window.closeModal = () => {
+    document.getElementById('modal').style.display = 'none';
+};
+
 function escapeHtml(str) { 
     return str?.replace(/[&<>]/g, function(m) { 
         return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]; 
@@ -556,16 +595,11 @@ function getStatusText(s) {
     }[s] || s; 
 }
 
-window.closeModal = () => document.getElementById('modal').style.display = 'none';
+// Event listeners para búsqueda y filtro
+const searchInput = document.getElementById('searchInput');
+const filterStatus = document.getElementById('filterStatus');
 
-window.showTab = (tab) => {
-    document.getElementById('createTab').style.display = tab === 'create' ? 'block' : 'none';
-    document.getElementById('viewTab').style.display = tab === 'view' ? 'block' : 'none';
-    document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', (tab === 'create' && i === 0) || (tab === 'view' && i === 1)));
-};
-
-document.getElementById('searchInput').addEventListener('input', renderTickets);
-document.getElementById('filterStatus').addEventListener('change', renderTickets);
-renderChanges();
+if (searchInput) searchInput.addEventListener('input', renderTickets);
+if (filterStatus) filterStatus.addEventListener('change', renderTickets);
 
 console.log('🔥 Sistema listo - esperando login');
