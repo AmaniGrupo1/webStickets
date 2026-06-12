@@ -246,14 +246,8 @@ if (toggleThemeBtn) {
 }
 
 // ========== GESTIÓN DE USUARIOS ==========
-// Crear usuario (requiere función cloud o backend)
-// NOTA: createUserWithEmailAndPassword no funciona desde cliente si está deshabilitado
-// Necesitas habilitar "Create" en Authentication > Settings > User actions
-
 async function cargarUsuarios() {
     try {
-        // Esta función requiere un backend o Cloud Function
-        // Por ahora, mostramos los usuarios de Firestore
         const usersCollection = collection(db, 'users');
         const snapshot = await getDocs(usersCollection);
         usersList = [];
@@ -298,7 +292,7 @@ function renderUsers() {
     `).join('');
 }
 
-// Crear usuario - Esto requiere una Cloud Function o tener habilitada la creación desde cliente
+// Crear usuario
 document.getElementById('createUserForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('newUserEmail').value.trim();
@@ -324,11 +318,8 @@ document.getElementById('createUserForm')?.addEventListener('submit', async (e) 
     document.body.appendChild(loadingAlert);
     
     try {
-        // IMPORTANTE: Necesitas habilitar "Create" en Firebase Console
-        // Authentication → Settings → User actions → Enable Create (sign up)
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        // Guardar en Firestore
         const usersCollection = collection(db, 'users');
         await addDoc(usersCollection, {
             uid: userCredential.user.uid,
@@ -341,7 +332,6 @@ document.getElementById('createUserForm')?.addEventListener('submit', async (e) 
         document.getElementById('createUserForm').reset();
         cargarUsuarios();
         
-        // Registrar cambio
         const changes = loadChanges();
         changes.push({
             title: `Usuario creado: ${email}`,
@@ -413,8 +403,6 @@ document.getElementById('editUserForm')?.addEventListener('submit', async (e) =>
     document.body.appendChild(loadingAlert);
     
     try {
-        // NOTA: updatePassword requiere que el usuario esté autenticado RECIENTEMENTE
-        // Para admin, necesitas una Cloud Function
         mostrarAlerta('⚠️ Limitación', 'Para cambiar contraseña de otro usuario, necesitas implementar una Cloud Function en Firebase', 'info');
         loadingAlert.remove();
         closeUserModal();
@@ -437,7 +425,6 @@ window.eliminarUsuario = async (uid) => {
     document.body.appendChild(loadingAlert);
     
     try {
-        // NOTA: deleteUser requiere Cloud Function para admin
         mostrarAlerta('⚠️ Limitación', 'Para eliminar usuarios, necesitas implementar una Cloud Function en Firebase', 'info');
         loadingAlert.remove();
     } catch (error) {
@@ -694,15 +681,212 @@ if (changeForm) {
     });
 }
 
+// ========== FUNCIONES PARA GESTIONAR DOCUMENTOS PDF ==========
+const API_BASE_URL = "http://localhost:8080/api/rag";
+
+// Cargar lista de documentos desde el backend
+async function cargarDocumentos() {
+    const container = document.getElementById('documentsList');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Cargando documentos...</div>';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/documents`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const documentos = await response.json();
+        
+        if (!documentos || documentos.length === 0) {
+            container.innerHTML = `
+                <div class="document-empty">
+                    <i class="fas fa-folder-open"></i>
+                    <p>No hay documentos almacenados</p>
+                    <p style="font-size: 12px; margin-top: 10px;">Sube tu primer PDF usando el formulario de arriba</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = documentos.map(doc => `
+            <div class="document-card" data-id="${doc.idDocumento}">
+                <div class="document-info">
+                    <i class="fas fa-file-pdf"></i>
+                    <div class="document-details">
+                        <div class="document-title">${escapeHtml(doc.titulo || doc.nombreArchivo || 'Sin título')}</div>
+                        <div class="document-meta">
+                            <span><i class="fas fa-hashtag"></i> ID: ${doc.idDocumento}</span>
+                            <span><i class="fas fa-tag"></i> ${escapeHtml(doc.categoria || 'Sin categoría')}</span>
+                            <span><i class="fas fa-layer-group"></i> Chunks: ${doc.totalChunks || 0}</span>
+                            <span><i class="fas fa-calendar"></i> ${doc.creadoEn ? new Date(doc.creadoEn).toLocaleDateString() : 'Fecha desconocida'}</span>
+                        </div>
+                        ${doc.nombreArchivo ? `<div class="document-meta"><span><i class="fas fa-file"></i> ${escapeHtml(doc.nombreArchivo)}</span></div>` : ''}
+                    </div>
+                </div>
+                <div class="document-actions">
+                    <button class="btn-delete-doc" onclick="eliminarDocumento(${doc.idDocumento}, '${escapeHtml(doc.titulo || doc.nombreArchivo || 'documento')}')">
+                        <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error al cargar documentos:', error);
+        container.innerHTML = `
+            <div class="document-empty">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al conectar con el backend</p>
+                <p style="font-size: 12px; margin-top: 10px;">Verifica que el backend esté corriendo en ${API_BASE_URL}</p>
+                <p style="font-size: 12px;">Error: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Eliminar documento por ID
+window.eliminarDocumento = async (idDocumento, nombreDocumento) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar el documento "${nombreDocumento}"?\n\nEsta acción es irreversible y eliminará todos los chunks asociados.`)) {
+        return;
+    }
+
+    const loadingAlert = document.createElement('div');
+    loadingAlert.innerHTML = `<div style="background: white; border-radius: 12px; padding: 20px;"><i class="fas fa-spinner fa-pulse"></i> Eliminando documento...</div>`;
+    loadingAlert.style.position = 'fixed';
+    loadingAlert.style.top = '50%';
+    loadingAlert.style.left = '50%';
+    loadingAlert.style.transform = 'translate(-50%, -50%)';
+    loadingAlert.style.zIndex = '10000';
+    document.body.appendChild(loadingAlert);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/documents/${idDocumento}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const resultado = await response.json();
+        
+        loadingAlert.remove();
+        mostrarAlerta('✅ Documento eliminado', `"${nombreDocumento}" ha sido eliminado correctamente`, 'success');
+        
+        // Registrar en el registro de cambios
+        const changes = loadChanges();
+        changes.push({
+            title: `Documento eliminado: ${nombreDocumento}`,
+            responsible: auth.currentUser?.email || 'Admin',
+            type: 'Documentación',
+            date: new Date().toISOString().slice(0, 10),
+            description: `Se eliminó el documento "${nombreDocumento}" del sistema RAG`,
+            createdAt: new Date().toISOString()
+        });
+        saveChanges(changes);
+        
+        // Recargar la lista de documentos
+        await cargarDocumentos();
+        
+        // También recargar el registro de cambios si está visible
+        renderChanges();
+        
+    } catch (error) {
+        loadingAlert.remove();
+        console.error('Error al eliminar documento:', error);
+        mostrarAlerta('❌ Error', `No se pudo eliminar el documento: ${error.message}`, 'error');
+    }
+};
+
+// Función para subir PDF
+window.subirPDF = async () => {
+    const fileInput = document.getElementById('pdfFile');
+    const file = fileInput?.files[0];
+
+    if (!file) {
+        mostrarAlerta("Error", "Selecciona un PDF", "error");
+        return;
+    }
+
+    if (file.type !== 'application/pdf') {
+        mostrarAlerta("Error", "Solo se permiten archivos PDF", "error");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const uploadBtn = document.getElementById('uploadPdfBtn');
+    const originalText = uploadBtn.innerHTML;
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Subiendo...';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/upload`, {
+            method: "POST",
+            body: formData
+        });
+
+        const resultado = await response.json();
+
+        if (response.ok) {
+            mostrarAlerta("Éxito", resultado.message || "PDF subido correctamente", "success");
+            console.log(resultado);
+            
+            // Limpiar input
+            fileInput.value = '';
+            
+            // Recargar la lista de documentos
+            await cargarDocumentos();
+            
+            // Registrar en el registro de cambios
+            const changes = loadChanges();
+            changes.push({
+                title: `PDF subido: ${file.name}`,
+                responsible: auth.currentUser?.email || 'Admin',
+                type: 'Nuevo feature',
+                date: new Date().toISOString().slice(0, 10),
+                description: `Se subió el documento PDF "${file.name}" al backend`,
+                createdAt: new Date().toISOString()
+            });
+            saveChanges(changes);
+            
+            // Recargar registro de cambios si está visible
+            renderChanges();
+        } else {
+            mostrarAlerta("Error", resultado.message || resultado.error || "Error al subir PDF", "error");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        mostrarAlerta("Error", "No se pudo conectar con el backend: " + error.message, "error");
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+    }
+};
+
 // ========== CONTROL DE PESTAÑAS ==========
 window.showTab = (tab) => {
     const usersTab = document.getElementById('usersTab');
     const viewTab = document.getElementById('viewTab');
     const changesTab = document.getElementById('changesTab');
+    const uploadTab = document.getElementById('uploadTab');
     
     if (usersTab) usersTab.style.display = 'none';
     if (viewTab) viewTab.style.display = 'none';
     if (changesTab) changesTab.style.display = 'none';
+    if (uploadTab) uploadTab.style.display = 'none';
     
     if (tab === 'users') {
         if (usersTab) usersTab.style.display = 'block';
@@ -713,16 +897,21 @@ window.showTab = (tab) => {
     } else if (tab === 'changes') {
         if (changesTab) changesTab.style.display = 'block';
         renderChanges();
+    } else if (tab === 'upload') {
+        if (uploadTab) uploadTab.style.display = 'block';
+        cargarDocumentos(); // Cargar documentos al mostrar la pestaña
     }
     
     document.querySelectorAll('.tab-btn').forEach((btn) => {
         const isUsers = btn.textContent.includes('Usuarios');
         const isView = btn.textContent.includes('Ver Tickets');
         const isChanges = btn.textContent.includes('Registro de Cambios');
+        const isUpload = btn.textContent.includes('Subir PDF');
         
         if ((tab === 'users' && isUsers) || 
             (tab === 'view' && isView) || 
-            (tab === 'changes' && isChanges)) {
+            (tab === 'changes' && isChanges) ||
+            (tab === 'upload' && isUpload)) {
             btn.classList.add('active');
         } else {
             btn.classList.remove('active');
@@ -784,4 +973,7 @@ const filterStatus = document.getElementById('filterStatus');
 if (searchInput) searchInput.addEventListener('input', renderTickets);
 if (filterStatus) filterStatus.addEventListener('change', renderTickets);
 
-console.log('🔥 Sistema listo con Firestore y gestión de usuarios');
+// Agregar event listener para el botón de subida
+document.getElementById('uploadPdfBtn')?.addEventListener('click', window.subirPDF);
+
+console.log('🔥 Sistema listo con Firestore, gestión de usuarios, gestión de documentos y subida de PDFs');
