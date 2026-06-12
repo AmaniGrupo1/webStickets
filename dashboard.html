@@ -89,6 +89,7 @@
             <button class="tab-btn active" onclick="showTab('users')"><i class="fas fa-users"></i> Usuarios</button>
             <button class="tab-btn" onclick="showTab('view')"><i class="fas fa-list-ul"></i> Ver Tickets</button>
             <button class="tab-btn" onclick="showTab('changes')"><i class="fas fa-history"></i> Registro de Cambios</button>
+            <button class="tab-btn" onclick="showTab('upload')"><i class="fas fa-cloud-upload-alt"></i> Subir PDF</button>
         </div>
 
         <!-- Pestaña Usuarios (Admin) -->
@@ -185,6 +186,34 @@
                 <div id="changesList" class="changes-list"></div>
             </div>
         </div>
+
+        <!-- Pestaña Subir PDF (MODIFICADA CON LISTA DE DOCUMENTOS) -->
+        <div id="uploadTab" class="form-section" style="display: none;">
+            <h2 class="form-title"><i class="fas fa-cloud-upload-alt"></i> Gestión de Documentos PDF</h2>
+            
+            <!-- Sección para subir nuevo PDF -->
+            <div class="upload-container" style="max-width: 600px; margin: 0 auto 40px auto;">
+                <h3 style="margin-bottom: 20px; color: #667eea;"><i class="fas fa-upload"></i> Subir nuevo documento</h3>
+                <div class="upload-area" style="border: 3px dashed #667eea; border-radius: 20px; padding: 60px 20px; text-align: center; background: #f8f9ff;">
+                    <i class="fas fa-file-pdf" style="font-size: 48px; color: #e74c3c;"></i>
+                    <p style="margin: 10px 0; color: #666;">Selecciona un archivo PDF</p>
+                    <input type="file" id="pdfFile" accept=".pdf" style="margin: 10px 0;">
+                    <button type="button" class="btn-submit" id="uploadPdfBtn" style="width: auto; padding: 10px 30px; margin-top: 10px;">
+                        <i class="fas fa-cloud-upload-alt"></i> Subir a Backend
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sección para listar y eliminar documentos existentes -->
+            <div class="documents-container" style="margin-top: 30px;">
+                <h3 style="margin-bottom: 20px; color: #667eea;">
+                    <i class="fas fa-database"></i> Documentos almacenados
+                </h3>
+                <div id="documentsList" class="documents-list">
+                    <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Cargando documentos...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL PARA EDITAR USUARIO -->
@@ -242,6 +271,6 @@
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
